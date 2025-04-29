@@ -5,22 +5,26 @@ const gameOverElement = document.getElementById('gameOver');
 const finalScoreElement = document.getElementById('finalScore');
 const startScreenElement = document.getElementById('startScreen');
 
-// Carregar a imagem do pássaro e do cano
-const birdImage = new Image();
-birdImage.src = 'file:///C:/Users/Aluno/Desktop/dadada/imagens%20para%20o%20projeto%201/image-removebg-preview.png'; // Caminho da imagem do pássaro
+// Imagem de fundo
+const backgroundImage = new Image();
+backgroundImage.src = 'https://s.zst.com.br/cms-assets/2021/06/minecraft-classic-capa.jpg';
 
+// Imagem do pássaro
+const birdImage = new Image();
+birdImage.src = 'https://github.com/Akazitos/projeto-1/blob/main/imagens/image-removebg-preview.png?raw=true';
+
+// Imagem do cano
 const pipeTexture = new Image();
-pipeTexture.src = 'https://i.pinimg.com/736x/41/ec/51/41ec519450f2d6eab830e86b97cd7d69.jpg'; // Caminho da textura do cano
+pipeTexture.src = 'https://i.pinimg.com/736x/41/ec/51/41ec519450f2d6eab830e86b97cd7d69.jpg';
 
 let bird = {
     x: 100,
     y: canvas.height / 2,
-    radius: 20,        // Ainda usado para colisão
     velocity: 0,
     gravity: 0.5,
     lift: -7,
-    width: 40,         // Largura da imagem do pássaro
-    height: 40         // Altura da imagem do pássaro
+    width: 40,
+    height: 40
 };
 
 let pipes = [];
@@ -44,22 +48,13 @@ function drawBird() {
 
 function drawPipes() {
     pipes.forEach(pipe => {
-        // Desenha o cano superior
+        ctx.drawImage(pipeTexture, pipe.x, 0, pipeWidth, pipe.top);
         ctx.drawImage(
             pipeTexture,
-            pipe.x,             // Posição X do cano
-            0,                  // Posição Y do cano (superior, por isso 0)
-            pipeWidth,          // Largura do cano
-            pipe.top            // Altura do cano superior
-        );
-
-        // Desenha o cano inferior
-        ctx.drawImage(
-            pipeTexture,
-            pipe.x,                         // Posição X do cano
-            pipe.top + pipeGap,             // Posição Y do cano inferior
-            pipeWidth,                      // Largura do cano
-            canvas.height - pipe.top - pipeGap // Altura do cano inferior
+            pipe.x,
+            pipe.top + pipeGap,
+            pipeWidth,
+            canvas.height - pipe.top - pipeGap
         );
     });
 }
@@ -68,7 +63,7 @@ function updateBird() {
     bird.velocity += bird.gravity;
     bird.y += bird.velocity;
 
-    if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+    if (bird.y + bird.height / 2 > canvas.height || bird.y - bird.height / 2 < 0) {
         gameState = 'over';
     }
 }
@@ -93,11 +88,23 @@ function updatePipes() {
 }
 
 function checkCollision() {
+    const hitboxPadding = 8;
+
+    const birdLeft = bird.x - bird.width / 2 + hitboxPadding;
+    const birdRight = bird.x + bird.width / 2 - hitboxPadding;
+    const birdTop = bird.y - bird.height / 2 + hitboxPadding;
+    const birdBottom = bird.y + bird.height / 2 - hitboxPadding;
+
     pipes.forEach(pipe => {
-        if (bird.x + bird.radius > pipe.x && bird.x - bird.radius < pipe.x + pipeWidth) {
-            if (bird.y - bird.radius < pipe.top || bird.y + bird.radius > pipe.top + pipeGap) {
-                gameState = 'over';
-            }
+        const pipeLeft = pipe.x;
+        const pipeRight = pipe.x + pipeWidth;
+        const pipeTopBottom = pipe.top + pipeGap;
+
+        const collidedTop = birdRight > pipeLeft && birdLeft < pipeRight && birdTop < pipe.top;
+        const collidedBottom = birdRight > pipeLeft && birdLeft < pipeRight && birdBottom > pipeTopBottom;
+
+        if (collidedTop || collidedBottom) {
+            gameState = 'over';
         }
     });
 }
@@ -105,6 +112,10 @@ function checkCollision() {
 function gameLoop() {
     if (gameState === 'playing') {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Desenhar o fundo ajustado à área jogável
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+
         drawBird();
         drawPipes();
         updateBird();
