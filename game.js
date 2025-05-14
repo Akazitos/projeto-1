@@ -17,6 +17,25 @@ birdImage.src = 'https://github.com/Akazitos/projeto-1/blob/main/imagens/image-r
 const pipeTexture = new Image();
 pipeTexture.src = 'https://i.pinimg.com/736x/41/ec/51/41ec519450f2d6eab830e86b97cd7d69.jpg';
 
+// Handle image loading
+let imagesLoaded = 0;
+const totalImages = 3;
+
+function imageLoaded() {
+    imagesLoaded++;
+    if (imagesLoaded === totalImages) {
+        console.log('All images loaded');
+    }
+}
+
+backgroundImage.onload = imageLoaded;
+birdImage.onload = imageLoaded;
+pipeTexture.onload = imageLoaded;
+
+backgroundImage.onerror = () => console.error('Failed to load background image');
+birdImage.onerror = () => console.error('Failed to load bird image');
+pipeTexture.onerror = () => console.error('Failed to load pipe texture');
+
 let bird = {
     x: 100,
     y: canvas.height / 2,
@@ -29,11 +48,12 @@ let bird = {
 
 let pipes = [];
 let score = 0;
+let highScore = localStorage.getItem('highScore') || 0;
 let gameState = 'start';
 const pipeWidth = 50;
 const pipeGap = 150;
 const pipeSpeed = 2;
-const pipeFrequency = 90;
+const pipeFrequency = 80; // Ajustado para um valor fixo equilibrado
 let frameCount = 0;
 
 function drawBird() {
@@ -69,22 +89,26 @@ function updateBird() {
 }
 
 function updatePipes() {
-    if (frameCount % pipeFrequency === 0) {
+    // Usar frequência fixa para evitar aumento de dificuldade
+    let currentPipeFrequency = pipeFrequency;
+    // Usar velocidade fixa
+    let currentPipeSpeed = pipeSpeed;
+
+    if (frameCount % currentPipeFrequency === 0) {
         let topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
         pipes.push({ x: canvas.width, top: topHeight, scored: false });
     }
 
     pipes.forEach(pipe => {
-        pipe.x -= pipeSpeed;
-        if (pipe.x + pipeWidth < 0) {
-            pipes.shift();
-        }
-        if (!pipe.scored && pipe.x + pipeWidth < bird.x) {
+        pipe.x -= currentPipeSpeed;
+        if (!pipe.scored && pipe.x + pipeWidth < bird.x && gameState === 'playing') {
             score++;
             pipe.scored = true;
             scoreElement.textContent = `Score: ${score}`;
         }
     });
+
+    pipes = pipes.filter(pipe => pipe.x + pipeWidth >= 0);
 }
 
 function checkCollision() {
@@ -109,33 +133,73 @@ function checkCollision() {
     });
 }
 
+function updateHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+    }
+    finalScoreElement.textContent = `${score} | High Score: ${highScore}`;
+}
+
+function startCountdown(callback) {
+    let countdown = 3;
+    gameState = 'countdown';
+    canvas.style.display = 'block';
+    startScreenElement.style.display = 'none';
+    scoreElement.style.display = 'block';
+    scoreElement.textContent = `Score: ${score}`;
+
+    function drawCountdown() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+        ctx.font = 'bold 72px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText(countdown, canvas.width / 2, canvas.height / 2);
+    }
+
+    drawCountdown();
+
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            drawCountdown();
+        } else {
+            clearInterval(countdownInterval);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            callback();
+        }
+    }, 1000);
+}
+
 function gameLoop() {
+    if (gameState === 'over') {
+        gameOverElement.style.display = 'block';
+        updateHighScore();
+        return;
+    }
     if (gameState === 'playing') {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Desenhar o fundo ajustado à área jogável
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-
         drawBird();
         drawPipes();
         updateBird();
         updatePipes();
         checkCollision();
         frameCount++;
-    } else if (gameState === 'over') {
-        gameOverElement.style.display = 'block';
-        finalScoreElement.textContent = score;
     }
     requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
-    gameState = 'playing';
-    startScreenElement.style.display = 'none';
-    canvas.style.display = 'block';
-    scoreElement.style.display = 'block';
-    scoreElement.textContent = `Score: ${score}`;
-    gameLoop();
+    if (imagesLoaded < totalImages) {
+        console.log('Waiting for images to load...');
+        return;
+    }
+    startCountdown(() => {
+        gameState = 'playing';
+        gameLoop();
+    });
 }
 
 function restartGame() {
@@ -145,12 +209,26 @@ function restartGame() {
     score = 0;
     frameCount = 0;
     gameState = 'playing';
-    scoreElement.textContent = `Score: ${score}`;
+    scoreElement.textContent = 'Score: 0'; // Corrigido para evitar concatenação incorreta
     gameOverElement.style.display = 'none';
+    gameLoop();
 }
 
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && gameState === 'playing') {
+        bird.velocity = bird.lift;
+    }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    if (gameState === 'playing') {
+        bird.velocity = bird.lift;
+        e.preventDefault();
+    }
+});
+
+canvas.addEventListener('click', () => {
+    if (gameState === 'playing') {
         bird.velocity = bird.lift;
     }
 });
