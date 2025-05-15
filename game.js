@@ -7,7 +7,7 @@ const startScreenElement = document.getElementById('startScreen');
 
 // Imagem de fundo
 const backgroundImage = new Image();
-backgroundImage.src = 'https://s.zst.com.br/cms-assets/2021/06/minecraft-classic-capa.jpg';
+backgroundImage.src = 'https://minecraft.wiki/images/thumb/Default_Superflat_world.png/640px-Default_Superflat_world.png?41d26';
 
 // Imagem do pássaro
 const birdImage = new Image();
@@ -15,7 +15,7 @@ birdImage.src = 'https://github.com/Akazitos/projeto-1/blob/main/imagens/image-r
 
 // Imagem do cano
 const pipeTexture = new Image();
-pipeTexture.src = 'https://i.pinimg.com/736x/41/ec/51/41ec519450f2d6eab830e86b97cd7d69.jpg';
+pipeTexture.src = 'https://img.freepik.com/vetores-premium/fundo-de-pixel-o-conceito-de-fundo-de-jogos-ilustracao-vetorial_652575-1362.jpg?semt=ais_hybrid&w=740';
 
 // Handle image loading
 let imagesLoaded = 0;
@@ -53,8 +53,10 @@ let gameState = 'start';
 const pipeWidth = 50;
 const pipeGap = 150;
 const pipeSpeed = 2;
-const pipeFrequency = 80; // Ajustado para um valor fixo equilibrado
+const pipeFrequency = 80;
 let frameCount = 0;
+let backgroundX = 0; // Nova variável para rastrear a posição do fundo
+const backgroundSpeed = 0.5; // Velocidade do fundo (mais lenta que os canos)
 
 function drawBird() {
     ctx.drawImage(
@@ -89,9 +91,7 @@ function updateBird() {
 }
 
 function updatePipes() {
-    // Usar frequência fixa para evitar aumento de dificuldade
     let currentPipeFrequency = pipeFrequency;
-    // Usar velocidade fixa
     let currentPipeSpeed = pipeSpeed;
 
     if (frameCount % currentPipeFrequency === 0) {
@@ -138,7 +138,7 @@ function updateHighScore() {
         highScore = score;
         localStorage.setItem('highScore', highScore);
     }
-    finalScoreElement.textContent = `${score} | High Score: ${highScore}`;
+    finalScoreElement.textContent = `${score} | High Score: ${highScore}`; // Removido espaço extra
 }
 
 function startCountdown(callback) {
@@ -151,9 +151,10 @@ function startCountdown(callback) {
 
     function drawCountdown() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Desenhar fundo estático durante a contagem
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
         ctx.font = 'bold 72px Arial';
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = '#3010E0';
         ctx.textAlign = 'center';
         ctx.fillText(countdown, canvas.width / 2, canvas.height / 2);
     }
@@ -167,6 +168,7 @@ function startCountdown(callback) {
         } else {
             clearInterval(countdownInterval);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            backgroundX = 0; // Resetar posição do fundo ao iniciar o jogo
             callback();
         }
     }, 1000);
@@ -180,7 +182,16 @@ function gameLoop() {
     }
     if (gameState === 'playing') {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+        
+        // Atualizar e desenhar o fundo com movimento
+        backgroundX -= backgroundSpeed; // Mover fundo para a esquerda
+        if (backgroundX <= -canvas.width) {
+            backgroundX += canvas.width; // Resetar quando a imagem sai da tela
+        }
+        // Desenhar duas instâncias da imagem para repetição contínua
+        ctx.drawImage(backgroundImage, backgroundX, 0, canvas.width, canvas.height);
+        ctx.drawImage(backgroundImage, backgroundX + canvas.width, 0, canvas.width, canvas.height);
+
         drawBird();
         drawPipes();
         updateBird();
@@ -208,8 +219,9 @@ function restartGame() {
     pipes = [];
     score = 0;
     frameCount = 0;
+    backgroundX = 0; // Resetar posição do fundo ao reiniciar
     gameState = 'playing';
-    scoreElement.textContent = 'Score: 0'; // Corrigido para evitar concatenação incorreta
+    scoreElement.textContent = 'Score: 0';
     gameOverElement.style.display = 'none';
     gameLoop();
 }
@@ -229,6 +241,6 @@ canvas.addEventListener('touchstart', (e) => {
 
 canvas.addEventListener('click', () => {
     if (gameState === 'playing') {
-        bird.velocity = bird.lift;
+        bird.velocity = lift;
     }
 });
